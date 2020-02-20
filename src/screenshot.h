@@ -7,7 +7,6 @@
 void read_process_output(char* cmd, char* buffer, int size) {
     FILE* fp;
     if ((fp = popen(cmd, "r")) != NULL) {
-        // TODO guard for buffer overflow
         while (fgets(buffer, size, fp) != NULL);
     } else {
         printf("Couldnt create subprocess with command:\n\t'%s'\n", cmd);
@@ -20,8 +19,8 @@ void screenshot_area_select(char* temp_path) {
     char geometry[1024];
     read_process_output("slurp -d  2>&1 | grep -v cancelled | tr -d '\n'", geometry, sizeof(geometry));
     printf("%s\n", geometry);
-    if (strcmp(geometry, "")) {
-        /* if not, take screenshot with the geometry */
+    /* If a geometry was returned, call grim with it. */
+    if (!strcmp(geometry, "")) {
         char cmd[2048];
         snprintf(cmd, sizeof(cmd), "grim -g '%s' '%s'", geometry, temp_path);
         char grim_output[1024];
