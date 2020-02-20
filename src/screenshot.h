@@ -4,48 +4,35 @@
 #include <stdlib.h>
 #include <string.h>
 
-char* read_process_output(char* cmd) {
+void read_process_output(char* cmd, char* buffer, int size) {
     FILE* fp;
     if ((fp = popen(cmd, "r")) != NULL) {
-        char buffer[255];
-        char* string = "";
-        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-            if (strncmp(string, "", 1)) {
-                printf("\n\ntest\n\n");
-                string = realloc(string, sizeof(string) + 256);
-            } else {
-                string = malloc(255);
-            }
-            scanf(string, buffer);
-        }
-        return string;
+        // TODO guard for buffer overflow
+        while (fgets(buffer, size, fp) != NULL);
     } else {
-        printf("Couldnt create subprocess with command:\n\t'%s'", cmd);
+        printf("Couldnt create subprocess with command:\n\t'%s'\n", cmd);
         exit(1);
     }
 }
 
-int screenshot_area_select(char* temp_path) {
+void screenshot_area_select(char* temp_path) {
     /* read window geometry to pass it to grim */
-    char* geometry;
-    if ((geometry = read_process_output("slurp -d")) != NULL) {
-        /* was the selection cancelled? */
-        if (strncmp(geometry, "selection cancelled", sizeof("selection cancelled"))) {
-            printf("Selection was cancelled.\n");
+    char geometry[1024];
+    read_process_output("slurp -d  2>&1 | grep -v cancelled | tr -d '\n'", geometry, sizeof(geometry));
+    printf("%s\n", geometry);
+    if (strcmp(geometry, "")) {
+        /* if not, take screenshot with the geometry */
+        char cmd[2048];
+        snprintf(cmd, sizeof(cmd), "grim -g '%s' '%s'", geometry, temp_path);
+        char grim_output[1024];
+        printf("%s\n", cmd);
+        read_process_output(cmd, grim_output, sizeof(grim_output));
+        if (strcmp(grim_output, "")) {
             exit(0);
-        /* take screenshot with the geometry */
         } else {
-            /* grim -o <path> -g <geo> */
-            char* cmd = strcat(strcat(strcat("grim -o ", temp_path), " -g "), geometry);
-            char* grim_output;
-            if (strncmp(grim_output = read_process_output(cmd), "", 1)) {
-                /* finished */
-                exit(0);
-            } else {
-                /* nothing was selected, exit */
-                printf("Grim failed to take a screenshot.\n\t'%s'Command used:\n\t'%s'", grim_output, cmd);
-                exit(0);
-            }
+            printf("Grim failed to take a screenshot.\n\t'%s'Command used:\n\t'%s'", grim_output, cmd);
+            printf("%s\n", grim_output);
+            exit(1);
         }
     } else {
         printf("Couldn't read slurp output.");
@@ -53,10 +40,11 @@ int screenshot_area_select(char* temp_path) {
     }
 }
 
-int screenshot_fullscreen(char* temp_path) {
+void screenshot_fullscreen(char* temp_path) {
     char* cmd = strcat("grim -o ", temp_path);
-    if (popen(cmd, "r") != NULL) {
-        return 0;
+    FILE* fp;
+    if ((fp = popen(cmd, "r")) != NULL) {
+        pclose(fp);
     } else {
         printf("Couldn't take a screenshot with the following command\n\t'%s'\n", cmd);
         exit(1);

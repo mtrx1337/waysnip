@@ -2,6 +2,8 @@
 #include "screenshot.c"
 
 int main(int argc, char** argv) {
+    (void) argc;
+    (void) argv;
     //GtkBuilder      *builder;
     //GtkWidget       *window;
 
